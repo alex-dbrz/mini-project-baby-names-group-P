@@ -2,7 +2,7 @@ import tempfile
 import numpy as np
 import streamlit as st
 import streamlit.components.v1 as components
-import pandas as pd
+import pandas as pd 
 import altair as alt
 import geopandas as gpd
 import folium
@@ -11,6 +11,8 @@ from streamlit_folium import folium_static
 # Load the datasets
 baby_names = pd.read_csv('dpt2020.csv', delimiter=';')
 departments = gpd.read_file('departements-version-simplifiee.geojson')
+regions = gpd.read_file("regions-version-simplifiee.geojson")
+correspondance = pd.read_csv("dpt-to-reg.csv", dtype=str)
 
 # Data preprocessing
 baby_names.drop(baby_names[baby_names.preusuel == '_PRENOMS_RARES'].index, inplace=True)
@@ -48,6 +50,8 @@ if visualization == 'Baby Names Over Time':
         st.altair_chart(chart)
 
 # Visualization 2: Regional Effect
+
+
 elif visualization == 'Regional Effect':
     st.header('Regional Effect of Baby Names in France')
     name = st.selectbox('Select a baby name', baby_names['preusuel'].unique())
@@ -55,26 +59,61 @@ elif visualization == 'Regional Effect':
     if name:
         subset_name = baby_names[baby_names['preusuel'] == name]
         data = departments.merge(subset_name, how='left', left_on='code', right_on='dpt')
+        data2 = pd.merge(subset_name, correspondance, left_on='dpt', right_on='num_dep', how='left')
         arr = [i for i in data['annais'].unique() if type(i) == str]
         arr.sort()
         year = st.selectbox('Select a year', arr)
         if year :
-            chart_data = data[data['annais']==year]
-            chart_data = departments.merge(chart_data[["dpt", "nombre"]], how='left', left_on='code', right_on='dpt')
-            chart_data = chart_data.fillna(0)
-            chart_data = chart_data.drop(columns='dpt')
-            regional_chart = alt.Chart(chart_data).mark_geoshape(stroke='white').encode(
-                tooltip=['nom','code', 'nombre'],
-                color=alt.Color('nombre:Q', scale=alt.Scale(scheme='viridis'), legend=alt.Legend(title='Nombre')),
-            ).properties(width=600, height=600)
-            with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as arquivo:
-                regional_chart.save(arquivo.name)
-                arquivo.flush()
-                HtmlFile = open(arquivo.name, 'r', encoding='utf-8')
+            if 'view_mode' not in st.session_state:
+                st.session_state.view_mode = 'departement'
+            col1, col2 = st.columns(2)
+            with col1:
+                st.image("https://media.istockphoto.com/id/584205358/fr/vectoriel/france-carte.jpg?s=612x612&w=0&k=20&c=eCCphbNXipSQxCuJ5fw1qjHKJ_NdKRVmccPtHSMYPgc=", caption="Départements", use_container_width=True, width=50)
+                if st.button("See by Départements"):
+                    st.session_state.view_mode = 'departement'
+            with col2:
+                st.image("https://static.vecteezy.com/system/resources/previews/014/342/168/non_2x/doodle-freehand-drawing-of-france-map-free-png.png", caption="Régions", use_container_width=True, width=45)
+                if st.button("See by Régions"):
+                    st.session_state.view_mode = 'region'
 
-                # Load HTML file in HTML component for display on Streamlit page
-                components.html(HtmlFile.read(), height=620)
-            # st.altair_chart(regional_chart)
+            if st.session_state.view_mode == 'departement':
+                chart_data = data[data['annais']==year]
+                chart_data = departments.merge(chart_data[["dpt", "nombre"]], how='left', left_on='code', right_on='dpt')
+                chart_data = chart_data.fillna(0)
+                chart_data = chart_data.drop(columns='dpt')
+                regional_chart = alt.Chart(chart_data).mark_geoshape(stroke='white').encode(
+                    tooltip=['nom','code', 'nombre'],
+                    color=alt.Color('nombre:Q', scale=alt.Scale(scheme='viridis'), legend=alt.Legend(title='Nombre')),
+                ).properties(width=600, height=600)
+                with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as arquivo:
+                    regional_chart.save(arquivo.name)
+                    arquivo.flush()
+                    HtmlFile = open(arquivo.name, 'r', encoding='utf-8')
+
+                    # Load HTML file in HTML component for display on Streamlit page
+                    components.html(HtmlFile.read(), height=620)
+                # st.altair_chart(regional_chart)
+
+            elif st.session_state.view_mode == 'region':
+                df_region = data2.groupby(['region_name', 'annais'])['nombre'].sum().reset_index()
+                map_data = regions.merge(df_region[df_region['annais'] == year], left_on='nom', right_on='region_name', how='left')
+                map_data = map_data.fillna({'nombre': 0})
+                chart = alt.Chart(map_data).mark_geoshape(stroke='white').encode(
+                    color=alt.Color('nombre:Q', scale=alt.Scale(scheme='viridis')),
+                    tooltip=['nom', 'nombre']
+                ).properties(width=600, height=600)
+                with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as arquivo:
+                    chart.save(arquivo.name)
+                    arquivo.flush()
+                    HtmlFile = open(arquivo.name, 'r', encoding='utf-8')
+
+                    # Load HTML file in HTML component for display on Streamlit page
+                    components.html(HtmlFile.read(), height=620)
+                # st.altair_chart(regional_chart)
+
+                st.altair_chart(chart)
+
+
 
 
 
