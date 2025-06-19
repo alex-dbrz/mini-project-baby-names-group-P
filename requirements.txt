@@ -1,0 +1,8 @@
+streamlit
+pandas
+altair
+geopandas
+pyarrow
+shapely
+folium
+streamlit-folium
