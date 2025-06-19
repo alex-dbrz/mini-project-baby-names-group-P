@@ -37,17 +37,75 @@ visualization = st.sidebar.selectbox('Choose a visualization type',
 
 # Visualization 1: Baby Names Over Time
 if visualization == 'Baby Names Over Time':
-    st.header('How do baby names evolve over time?')
-    names_list = st.multiselect('Select baby names', baby_names['preusuel'].unique())
-    
-    if names_list:
-        subset = baby_names[baby_names['preusuel'].isin(names_list)]
-        chart = alt.Chart(subset).mark_line().encode(
-            x='annais:O',
-            y='sum(nombre):Q',
-            color='preusuel:N'
-        ).properties(width=800, height=400)
-        st.altair_chart(chart)
+    agg_baby_names = baby_names.groupby(['preusuel', 'annais']).agg({'nombre': 'sum'}).reset_index()
+
+    st.header('Name Trends Interactive Visualization')
+
+    # input for searching names
+    search_text = st.text_input('Search for names (partial match):')
+
+    if 'selected_names' not in st.session_state:
+        st.session_state.selected_names = []
+
+    # filter names based on search text
+    filtered_names = sorted(agg_baby_names['preusuel'].unique())
+    if search_text:
+        filtered_names = [name for name in filtered_names if search_text.lower() in name.lower()]
+
+    new_selection = st.multiselect('Select names to highlight:', options=filtered_names)
+
+    # update session state with new selections
+    for name in new_selection:
+        if name not in st.session_state.selected_names:
+            st.session_state.selected_names.append(name)
+
+    # show selected names
+    st.write('### Selected Names:')
+    to_remove = st.multiselect('Remove names:', options=st.session_state.selected_names)
+    for name in to_remove:
+        st.session_state.selected_names.remove(name)
+
+    # No selection -> All lines in original color
+    if not st.session_state.selected_names:
+        final_chart = alt.Chart(agg_baby_names).mark_line(point=True).encode(
+            x=alt.X('annais:O', title='Year'),
+            y=alt.Y('nombre:Q', title='Number of Occurrences'),
+            color=alt.Color('preusuel:N', legend=alt.Legend(title='Name')),
+            tooltip=['preusuel', 'annais', 'nombre']
+        ).properties(width=600, height=600, title='Name Trends (All Names)')
+    # Selection made -> Only600lected names colored, others grayed out
+    else:
+        # Split baby_names into selected and unselected
+        agg_baby_names['is_selected'] = agg_baby_names['preusuel'].apply(lambda x: x in st.session_state.selected_names)
+        selected_baby_names = agg_baby_names[agg_baby_names['is_selected']]
+        unselected_baby_names = agg_baby_names[~agg_baby_names['is_selected']]
+
+        # Base chart for unselected (gray lines)
+        base_chart = alt.Chart(unselected_baby_names).mark_line(point=False).encode(
+            x=alt.X('annais:O', title='Year'),
+            y=alt.Y('nombre:Q', title='Number of Occurrences'),
+            detail='preusuel:N', 
+            color=alt.value('#D3D3D3'),
+            opacity=alt.value(0.1),
+            tooltip=['preusuel', 'annais', 'nombre']
+        )
+
+        # Top chart for selected (colored lines)
+        highlight_chart = alt.Chart(selected_baby_names).mark_line(point=True).encode(
+            x=alt.X('annais:O'),
+            y=alt.Y('nombre:Q'),
+            color=alt.Color('preusuel:N', legend=alt.Legend(title='Name')),
+            tooltip=['preusuel', 'annais', 'nombre']
+        )
+
+        # Combine charts in layers
+        final_chart = alt.layer(base_chart, highlight_chart).properties(
+            width=600,
+            height=600,
+            title='Name Trends (Selected Lines on Top)'
+        )
+
+    st.altair_chart(final_chart, use_container_width=True)
 
 # Visualization 2: Regional Effect
 
