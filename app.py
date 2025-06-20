@@ -17,15 +17,6 @@ correspondance = pd.read_csv("dpt-to-reg.csv", dtype=str)
 # Data preprocessing
 baby_names.drop(baby_names[baby_names.preusuel == '_PRENOMS_RARES'].index, inplace=True)
 baby_names.drop(baby_names[baby_names.dpt == 'XX'].index, inplace=True)
-# # Merge datasets
-# names = departments.merge(baby_names, how='right', left_on='code', right_on='dpt')
-# # Drop the geometry column before groupby
-# names_no_geom = names.drop(columns='geometry')
-
-# # Perform the groupby operation
-# grouped = names_no_geom.groupby(['dpt', 'preusuel', 'sexe'], as_index=False).sum()
-# # Merge the geometry data back in
-# grouped = departments.merge(grouped, how='right', left_on='code', right_on='dpt')
 
 # Title of the app
 st.title('Interactive Baby Names Visualization in France')
@@ -33,7 +24,7 @@ st.title('Interactive Baby Names Visualization in France')
 # Sidebar for selecting the visualization
 st.sidebar.title('Select Visualization')
 visualization = st.sidebar.selectbox('Choose a visualization type', 
-                                     ['Baby Names Over Time', 'Regional Effect', 'Names by Sex Over Time'])
+                                     ['Names by Sex Over Time', 'Baby Names Over Time', 'Regional Effect'])
 
 # Visualization 1: Baby Names Over Time
 if visualization == 'Baby Names Over Time':
@@ -107,9 +98,9 @@ if visualization == 'Baby Names Over Time':
 
     st.altair_chart(final_chart, use_container_width=True)
 
+
+
 # Visualization 2: Regional Effect
-
-
 elif visualization == 'Regional Effect':
     st.header('Regional Effect of Baby Names in France')
     name = st.selectbox('Select a baby name', baby_names['preusuel'].unique())
@@ -180,63 +171,58 @@ elif visualization == 'Names by Sex Over Time':
 
     df = baby_names.copy()
     df = df[df['sexe'].isin([1, 2])]
-    
-    # Regroupement par prénom, année et sexe
+
+    # Étape 1 : comme avant
     grouped = df.groupby(['preusuel', 'annais', 'sexe'])['nombre'].sum().reset_index()
     pivot = grouped.pivot_table(index=['preusuel', 'annais'], columns='sexe', values='nombre', fill_value=0).reset_index()
     pivot.columns = ['preusuel', 'annais', 'garcons', 'filles']
-    
     pivot['total'] = pivot['garcons'] + pivot['filles']
     pivot = pivot[pivot['total'] > 0]
     pivot['pct_fille'] = pivot['filles'] / pivot['total']
 
-    # Classification plus fine
+    # Classification
     def classify_gender(pct):
         if pct == 0.0:
             return 'Uniquement masculin'
         elif pct < 0.05:
-            return 'Très masculin'
-        elif pct < 0.30:
-            return 'Légèrement masculin'
-        elif pct <= 0.70:
+            return 'Majoritairement masculin'
+        elif pct < 0.95:
             return 'Neutre'
-        elif pct <= 0.95:
-            return 'Légèrement féminin'
         elif pct < 1.0:
-            return 'Très féminin'
+            return 'Majoritairement féminin'
         else:
             return 'Uniquement féminin'
 
     pivot['genre_percu'] = pivot['pct_fille'].apply(classify_gender)
 
-    # Compter le nombre de prénoms par catégorie par année
-    genre_counts = pivot.groupby(['annais', 'genre_percu']).size().reset_index(name='count')
-    total_by_year = genre_counts.groupby('annais')['count'].transform('sum')
-    genre_counts['proportion'] = genre_counts['count'] / total_by_year
+    # Étape 2 : joindre les classifications à la base initiale
+    df_genre = df.merge(pivot[['preusuel', 'annais', 'genre_percu']], on=['preusuel', 'annais'], how='left')
+
+    # Étape 3 : calcul du total de personnes par genre perçu
+    genre_counts_people = df_genre.groupby(['annais', 'genre_percu'])['nombre'].sum().reset_index()
+    total_by_year_people = genre_counts_people.groupby('annais')['nombre'].transform('sum')
+    genre_counts_people['proportion'] = genre_counts_people['nombre'] / total_by_year_people
+
 
     ordered_categories = [
         'Uniquement masculin',
-        'Très masculin',
-        'Légèrement masculin',
+        'Majoritairement masculin',
         'Neutre',
-        'Légèrement féminin',
-        'Très féminin',
+        'Majoritairement féminin',
         'Uniquement féminin'
     ]
 
     ordre_map = {cat: f"{i}:{cat}" for i, cat in enumerate(ordered_categories)}
-    genre_counts['order'] = genre_counts['genre_percu'].map(ordre_map)
+    genre_counts_people['order'] = genre_counts_people['genre_percu'].map(ordre_map)
 
     prenoms_by_group = pivot.groupby(['annais', 'genre_percu'])['preusuel'].apply(
-        lambda x: ', '.join(sorted(set(x))[:15]) + ('...' if len(set(x)) > 15 else '')
+        lambda x: ', '.join(sorted(set(x))[:20]) + ('...' if len(set(x)) > 20 else '')
     ).reset_index(name='prenoms')
 
-    genre_counts = genre_counts.merge(prenoms_by_group, on=['annais', 'genre_percu'], how='left')
-
-    print(genre_counts)
+    genre_counts_people = genre_counts_people.merge(prenoms_by_group, on=['annais', 'genre_percu'], how='left')
 
     # Créer le graphe Altair
-    chart = alt.Chart(genre_counts).mark_area(
+    chart = alt.Chart(genre_counts_people).mark_area(
     ).encode(
         x=alt.X('annais:O', title='Année'),
         y=alt.Y('proportion:Q', stack='normalize', title='Proportion'),
@@ -245,7 +231,7 @@ elif visualization == 'Names by Sex Over Time':
         tooltip=[
             alt.Tooltip('annais:O', title='Année'),
             alt.Tooltip('genre_percu:N', title='Genre perçu'),
-            alt.Tooltip('count:Q', title='Nombre de prénoms'),
+            alt.Tooltip('nombre:Q', title='Nombre de prénoms'),
             alt.Tooltip('proportion:Q', title='Proportion', format='.2%'),
             alt.Tooltip('prenoms:N', title='Exemples de prénoms')
         ]
