@@ -26,7 +26,7 @@ This is a Streamlit application for visualizing baby names in France over time, 
 2. **Create a virtual environment** (recommended):
     ```bash
     python -m venv venv
-    source venv/bin/activate   # On Windows, use `venv\Scripts\activate`
+    source venv/bin/activate   # On Windows, use `.\venv\Scripts\activate.ps1`
     ```
 
 3. **Install the required packages**:
