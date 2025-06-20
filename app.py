@@ -173,6 +173,7 @@ elif visualization == 'Regional Effect':
 
 
 
+# Visualization 3: Gender Perception Trends in Baby Names
 
 
 elif visualization == 'Names by Sex Over Time':
