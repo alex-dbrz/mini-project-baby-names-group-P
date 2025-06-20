@@ -6,7 +6,7 @@ This is a Streamlit application for visualizing baby names in France over time, 
 
 1. **Baby Names Over Time**: A line chart showing the evolution of selected baby names over the years.
 2. **Regional Effect**: A geographic map showing the popularity of a selected baby name across different regions.
-3. **Names by Sex Over Time**: A stacked bar chart showing the proportion of selected baby names by sex over the years.
+3. **Gender Perception Trends in Baby Names**: A stacked area chart showing the evolving perceived gender of baby names over time, categorized from exclusively masculine to exclusively feminine.
 
 ## Installation
 
