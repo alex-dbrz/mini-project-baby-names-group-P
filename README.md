@@ -77,7 +77,7 @@ Select multiple male and female baby names to see their proportions over the yea
 Here are some example visualizations you can create with this application:
 - **Evolution of the names "Marie" and "Jean" over time**.
 - **Popularity of the name "Lucien" across different regions in France**.
-- **Proportion of the names "Marie" and "Lucie" (female) and "Jean" and "Pierre" (male) over time**.
+- **Change in the perceived gender of names like "Camille" or "Dominique" over time.**.
 
 ## Troubleshooting
 
