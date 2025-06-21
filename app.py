@@ -32,17 +32,11 @@ if visualization == 'Baby Names Over Time':
 
     st.header('Name Trends Interactive Visualization')
 
-    # input for searching names
-    search_text = st.text_input('Search for names (partial match):')
-
     if 'selected_names' not in st.session_state:
         st.session_state.selected_names = []
 
     # filter names based on search text
     filtered_names = sorted(agg_baby_names['preusuel'].unique())
-    if search_text:
-        filtered_names = [name for name in filtered_names if search_text.lower() in name.lower()]
-
     new_selection = st.multiselect('Select names to highlight:', options=filtered_names)
 
     # update session state with new selections
@@ -56,30 +50,42 @@ if visualization == 'Baby Names Over Time':
     for name in to_remove:
         st.session_state.selected_names.remove(name)
 
+    # # Compute the mean and standard deviation for each year
+    year_stats = baby_names.groupby('annais')['nombre'].agg(['mean','std']).reset_index()
+    # # log print mean and std
+    # st.write('### Mean and Standard Deviation of Name Occurrences Over Time')
+    # st.write(year_stats)
+    
+    # base chart: mean line and standard deviation area
+    mean_line = alt.Chart(year_stats).mark_line(color='gray').encode(
+        x=alt.X('annais:O', title='Year'),
+        y=alt.Y('mean:Q', title='Mean Number of Occurrences')
+    )
+    std_area = alt.Chart(year_stats).transform_calculate(
+        upper='datum.mean + datum.std',
+        lower='datum.mean - datum.std'
+    ).mark_area(
+        color='lightgray', opacity=0.5
+    ).encode(
+        x='annais:O',
+        y='lower:Q',
+        y2='upper:Q'
+    )
+    # Combine
+    base_chart = alt.layer(mean_line, std_area).properties(
+        width=600,
+        height=600,
+        title='Mean and Standard Deviation of Name Occurrences Over Time'
+    )
+
     # No selection -> All lines in original color
     if not st.session_state.selected_names:
-        final_chart = alt.Chart(agg_baby_names).mark_line(point=True).encode(
-            x=alt.X('annais:O', title='Year'),
-            y=alt.Y('nombre:Q', title='Number of Occurrences'),
-            color=alt.Color('preusuel:N', legend=alt.Legend(title='Name')),
-            tooltip=['preusuel', 'annais', 'nombre']
-        ).properties(width=600, height=600, title='Name Trends (All Names)')
-    # Selection made -> Only600lected names colored, others grayed out
+        final_chart = base_chart
     else:
         # Split baby_names into selected and unselected
         agg_baby_names['is_selected'] = agg_baby_names['preusuel'].apply(lambda x: x in st.session_state.selected_names)
         selected_baby_names = agg_baby_names[agg_baby_names['is_selected']]
         unselected_baby_names = agg_baby_names[~agg_baby_names['is_selected']]
-
-        # Base chart for unselected (gray lines)
-        base_chart = alt.Chart(unselected_baby_names).mark_line(point=False).encode(
-            x=alt.X('annais:O', title='Year'),
-            y=alt.Y('nombre:Q', title='Number of Occurrences'),
-            detail='preusuel:N', 
-            color=alt.value('#D3D3D3'),
-            opacity=alt.value(0.1),
-            tooltip=['preusuel', 'annais', 'nombre']
-        )
 
         # Top chart for selected (colored lines)
         highlight_chart = alt.Chart(selected_baby_names).mark_line(point=True).encode(
