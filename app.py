@@ -123,11 +123,9 @@ elif visualization == 'Regional Effect':
                 st.session_state.view_mode = 'departement'
             col1, col2 = st.columns(2)
             with col1:
-                st.image("https://media.istockphoto.com/id/584205358/fr/vectoriel/france-carte.jpg?s=612x612&w=0&k=20&c=eCCphbNXipSQxCuJ5fw1qjHKJ_NdKRVmccPtHSMYPgc=", caption="Départements", use_container_width=True, width=50)
                 if st.button("See by Départements"):
                     st.session_state.view_mode = 'departement'
             with col2:
-                st.image("https://static.vecteezy.com/system/resources/previews/014/342/168/non_2x/doodle-freehand-drawing-of-france-map-free-png.png", caption="Régions", use_container_width=True, width=45)
                 if st.button("See by Régions"):
                     st.session_state.view_mode = 'region'
 
@@ -138,7 +136,7 @@ elif visualization == 'Regional Effect':
                 chart_data = chart_data.drop(columns='dpt')
                 regional_chart = alt.Chart(chart_data).mark_geoshape(stroke='white').encode(
                     tooltip=['nom','code', 'nombre'],
-                    color=alt.Color('nombre:Q', scale=alt.Scale(scheme='viridis'), legend=alt.Legend(title='Nombre')),
+                    color=alt.Color('nombre:Q', scale=alt.Scale(scheme='viridis'), legend=alt.Legend(title='Number')),
                 ).properties(width=600, height=600)
                 with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as arquivo:
                     regional_chart.save(arquivo.name)
@@ -154,7 +152,7 @@ elif visualization == 'Regional Effect':
                 map_data = regions.merge(df_region[df_region['annais'] == year], left_on='nom', right_on='region_name', how='left')
                 map_data = map_data.fillna({'nombre': 0})
                 chart = alt.Chart(map_data).mark_geoshape(stroke='white').encode(
-                    color=alt.Color('nombre:Q', scale=alt.Scale(scheme='viridis')),
+                    color=alt.Color('nombre:Q', scale=alt.Scale(scheme='viridis'), legend=alt.Legend(title='Number')),
                     tooltip=['nom', 'nombre']
                 ).properties(width=600, height=600)
                 with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as arquivo:
@@ -166,7 +164,7 @@ elif visualization == 'Regional Effect':
                     components.html(HtmlFile.read(), height=620)
                 # st.altair_chart(regional_chart)
 
-                st.altair_chart(chart)
+                #st.altair_chart(chart)
 
 
 
