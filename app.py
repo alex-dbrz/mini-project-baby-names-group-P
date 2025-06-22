@@ -162,22 +162,17 @@ elif visualization == 'Regional Effect':
 
                     # Load HTML file in HTML component for display on Streamlit page
                     components.html(HtmlFile.read(), height=620)
-                # st.altair_chart(regional_chart)
 
-                #st.altair_chart(chart)
 
 
 
 # Visualization 3: Gender Perception Trends in Baby Names
-
-
 elif visualization == 'Names by Sex Over Time':
     st.header('Gender Perception of Names Over Time')
 
     df = baby_names.copy()
     df = df[df['sexe'].isin([1, 2])]
 
-    # Étape 1 : comme avant
     grouped = df.groupby(['preusuel', 'annais', 'sexe'])['nombre'].sum().reset_index()
     pivot = grouped.pivot_table(index=['preusuel', 'annais'], columns='sexe', values='nombre', fill_value=0).reset_index()
     pivot.columns = ['preusuel', 'annais', 'garcons', 'filles']
@@ -200,14 +195,11 @@ elif visualization == 'Names by Sex Over Time':
 
     pivot['genre_percu'] = pivot['pct_fille'].apply(classify_gender)
 
-    # Étape 2 : joindre les classifications à la base initiale
     df_genre = df.merge(pivot[['preusuel', 'annais', 'genre_percu']], on=['preusuel', 'annais'], how='left')
 
-    # Étape 3 : calcul du total de personnes par genre perçu
     genre_counts_people = df_genre.groupby(['annais', 'genre_percu'])['nombre'].sum().reset_index()
     total_by_year_people = genre_counts_people.groupby('annais')['nombre'].transform('sum')
     genre_counts_people['proportion'] = genre_counts_people['nombre'] / total_by_year_people
-
 
     ordered_categories = [
         'Uniquement masculin',
@@ -226,7 +218,7 @@ elif visualization == 'Names by Sex Over Time':
 
     genre_counts_people = genre_counts_people.merge(prenoms_by_group, on=['annais', 'genre_percu'], how='left')
 
-    # Créer le graphe Altair
+    # graphe Altair
     chart = alt.Chart(genre_counts_people).mark_area(
     ).encode(
         x=alt.X('annais:O', title='Année'),
@@ -245,6 +237,15 @@ elif visualization == 'Names by Sex Over Time':
         height=400,
         title='Évolution des genres perçus par année'
     )
-
+    st.markdown("""
+    - La catégorisation du "genre perçu" repose sur des seuils arbitraires :
+        - 0% → Uniquement masculin
+        - <5% → Très masculin
+        - <30% → Légèrement masculin
+        - 30–70% → Neutre
+        - >70% → Légèrement féminin
+        - >95% → Très féminin
+        - 100% → Uniquement féminin
+    """)
 
     st.altair_chart(chart)
