@@ -241,9 +241,7 @@ elif visualization == 'Names by Sex Over Time':
     - La catégorisation du "genre perçu" repose sur des seuils arbitraires :
         - 0% → Uniquement masculin
         - <5% → Très masculin
-        - <30% → Légèrement masculin
-        - 30–70% → Neutre
-        - >70% → Légèrement féminin
+        - 5–95% → Neutre
         - >95% → Très féminin
         - 100% → Uniquement féminin
     """)
